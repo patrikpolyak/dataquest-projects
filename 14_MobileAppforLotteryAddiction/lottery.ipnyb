@@ -1,0 +1,364 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Mobile App for Lottery Addiction\n",
+    "\n",
+    "Focus on the 6/49 lottery and build functions that enable users to answer questions like:\n",
+    "\n",
+    "* What is the probability of winning the big prize with a single ticket?\n",
+    "* What is the probability of winning the big prize if we play 40 different tickets (or any other number)?\n",
+    "* What is the probability of having at least five (or four, or three, or two) winning numbers on a single ticket?"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "# function to calculate factorials\n",
+    "def factorial(n):\n",
+    "    if n == 1:\n",
+    "        return 1\n",
+    "    else:\n",
+    "        return n * factorial(n-1)\n",
+    "\n",
+    "# function to calculation combinations\n",
+    "def combinations(n, k):\n",
+    "    numerator = factorial(n)\n",
+    "    denominator = factorial(k) * factorial(n-k)\n",
+    "    return numerator / denominator"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "# calculate the probability to win with a single ticket\n",
+    "def one_ticket_probability():\n",
+    "    c_lottery = combinations(49, 6)\n",
+    "    p_lottery = 1 / c_lottery\n",
+    "    return 'Chance to win with 1 ticket is: {:.8f}%'.format(p_lottery * 100)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "'Chance to win with 1 ticket is: 0.00000715%'"
+      ]
+     },
+     "execution_count": 15,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "one_ticket_probability()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "(3665, 11)\n",
+      "   PRODUCT  DRAW NUMBER  SEQUENCE NUMBER  DRAW DATE  NUMBER DRAWN 1  \\\n",
+      "0      649            1                0  6/12/1982               3   \n",
+      "1      649            2                0  6/19/1982               8   \n",
+      "2      649            3                0  6/26/1982               1   \n",
+      "\n",
+      "   NUMBER DRAWN 2  NUMBER DRAWN 3  NUMBER DRAWN 4  NUMBER DRAWN 5  \\\n",
+      "0              11              12              14              41   \n",
+      "1              33              36              37              39   \n",
+      "2               6              23              24              27   \n",
+      "\n",
+      "   NUMBER DRAWN 6  BONUS NUMBER  \n",
+      "0              43            13  \n",
+      "1              41             9  \n",
+      "2              39            34  \n",
+      "      PRODUCT  DRAW NUMBER  SEQUENCE NUMBER  DRAW DATE  NUMBER DRAWN 1  \\\n",
+      "3662      649         3589                0  6/13/2018               6   \n",
+      "3663      649         3590                0  6/16/2018               2   \n",
+      "3664      649         3591                0  6/20/2018              14   \n",
+      "\n",
+      "      NUMBER DRAWN 2  NUMBER DRAWN 3  NUMBER DRAWN 4  NUMBER DRAWN 5  \\\n",
+      "3662              22              24              31              32   \n",
+      "3663              15              21              31              38   \n",
+      "3664              24              31              35              37   \n",
+      "\n",
+      "      NUMBER DRAWN 6  BONUS NUMBER  \n",
+      "3662              34            16  \n",
+      "3663              49             8  \n",
+      "3664              48            17  \n"
+     ]
+    }
+   ],
+   "source": [
+    "import pandas as pd\n",
+    "import numpy as np\n",
+    "# get historical data from previous lottery draws\n",
+    "lottery_df = pd.read_csv('649.csv')\n",
+    "print(lottery_df.shape)\n",
+    "print(lottery_df.head(3))\n",
+    "print(lottery_df.tail(3))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "0    {3, 41, 11, 12, 43, 14}\n",
+       "1    {33, 36, 37, 39, 8, 41}\n",
+       "2     {1, 6, 39, 23, 24, 27}\n",
+       "dtype: object"
+      ]
+     },
+     "execution_count": 23,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# convert historical data to sets\n",
+    "def extract_numbers(row):\n",
+    "    columns = row[4:10]\n",
+    "    numbers = set(columns.values)\n",
+    "    return numbers\n",
+    "\n",
+    "winning_numbers = lottery_df.apply(extract_numbers, axis=1)\n",
+    "winning_numbers.head(3)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 27,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "'The combination [1, 2, 3, 4, 5, 6] has never occurred before.'"
+      ]
+     },
+     "execution_count": 27,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# check if chosen numbers have won before\n",
+    "def check_historical_occurrence(chosen_numbers_list, winning_numbers):\n",
+    "    chosen_numbers_set = set(chosen_numbers_list)\n",
+    "    have_occurred = chosen_numbers_set == winning_numbers\n",
+    "    number_of_times = have_occurred.sum()\n",
+    "    if number_of_times > 0:\n",
+    "        return \"The combination {} has occurred before {} times.\".format(chosen_numbers_set, number_of_times)\n",
+    "    else:\n",
+    "        return \"The combination {} has never occurred before.\".format(chosen_numbers_list)\n",
+    "    \n",
+    "check_historical_occurrence([1,2,3,4,5,6], winning_numbers)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 28,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "'The combination {33, 36, 37, 39, 8, 41} has occurred before 1 times.'"
+      ]
+     },
+     "execution_count": 28,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "check_historical_occurrence([33, 36, 37, 39, 8, 41], winning_numbers)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 38,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "# calculate the probability to play with multiple tickets\n",
+    "def multi_ticket_probability(n_tickets):\n",
+    "    c_lottery = combinations(49, 6)\n",
+    "    p_lottery = n_tickets / c_lottery\n",
+    "    return 'Chance to win with {} tickets is: {:.8f}%\\nIn other words you have a 1 in {} chance to win.\\n'.format(n_tickets, p_lottery * 100, int(1/p_lottery))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 39,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Chance to win with 1 tickets is: 0.00000715%\n",
+      "In other words you have a 1 in 13983816 chance to win.\n",
+      "\n",
+      "Chance to win with 10 tickets is: 0.00007151%\n",
+      "In other words you have a 1 in 1398381 chance to win.\n",
+      "\n",
+      "Chance to win with 100 tickets is: 0.00071511%\n",
+      "In other words you have a 1 in 139838 chance to win.\n",
+      "\n",
+      "Chance to win with 10000 tickets is: 0.07151124%\n",
+      "In other words you have a 1 in 1398 chance to win.\n",
+      "\n",
+      "Chance to win with 1000000 tickets is: 7.15112384%\n",
+      "In other words you have a 1 in 13 chance to win.\n",
+      "\n",
+      "Chance to win with 6991908 tickets is: 50.00000000%\n",
+      "In other words you have a 1 in 2 chance to win.\n",
+      "\n",
+      "Chance to win with 13983816 tickets is: 100.00000000%\n",
+      "In other words you have a 1 in 1 chance to win.\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "for n in [1, 10, 100, 10000, 1000000, 6991908, 13983816]:\n",
+    "    print(multi_ticket_probability(n))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 60,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "def probability_less_6(n_winning):\n",
+    "    n_combinations = combinations(6, n_winning)\n",
+    "    n_combinations_remaining = combinations(49-n_winning, 6-n_winning)\n",
+    "    successful_outcomes = n_combinations * n_combinations_remaining\n",
+    "    denominator = combinations(49, 6)\n",
+    "    chance = successful_outcomes / denominator\n",
+    "    return \"The chancet to get {} winning numbers is {:.8f}%\\n\".format(n_winning, chance)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 61,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "The chancet to get 2 winning numbers is 0.19132653%\n",
+      "\n",
+      "The chancet to get 3 winning numbers is 0.02171081%\n",
+      "\n",
+      "The chancet to get 4 winning numbers is 0.00106194%\n",
+      "\n",
+      "The chancet to get 5 winning numbers is 0.00001888%\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "for n in range(2,6):\n",
+    "    print(probability_less_6(n))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 59,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "15180.0"
+      ]
+     },
+     "execution_count": 59,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.4.3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
